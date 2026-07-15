@@ -626,9 +626,10 @@ local trolCorner = Instance.new("UICorner")
 trolCorner.Parent = TrolBtn
 
 
-	--------------------------------------------------
-	--Esp
-	--------------------------------------------------
+--------------------------------------------------
+-- ESP
+--------------------------------------------------
+
 	local visualsPage_Layout = Instance.new("UIListLayout")
 	visualsPage_Layout.Padding = UDim.new(0, 10)
 	visualsPage_Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
