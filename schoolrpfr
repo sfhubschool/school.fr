@@ -627,7 +627,7 @@ trolCorner.Parent = TrolBtn
 
 
 	--------------------------------------------------
-	-----Esp
+	--Esp
 	--------------------------------------------------
 	local visualsPage_Layout = Instance.new("UIListLayout")
 	visualsPage_Layout.Padding = UDim.new(0, 10)
