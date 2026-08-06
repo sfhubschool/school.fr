@@ -1,5 +1,5 @@
 --[========================================================================]
--- ⚡ vbnx V2 - Code mis à jour et corrigé (Aim Fluidité Avancée + Calcul Saut/Mouvements + Auto Shoot Précis)
+-- ⚡ vbnx V2 - Code mis à jour, optimisé et entièrement corrigé
 --[========================================================================]
 
 local Players = game:GetService("Players")
@@ -81,6 +81,7 @@ local translations = {
 		TornadoSpeedLabel = "🌪️ Vitesse Rotation : ",
 		TornadoSpeedHint = "(Vitesse folle > 3000)",
 		InstantKillAll = "   Instant Kill All : ",
+		InfiniteJump = "   Infinite Jump : ",
 		TpMapCenter = "   TP Centre Map",
 		TpRoof = "   TP Roof",
 		TpSpawn = "   TP Spawn",
@@ -134,13 +135,14 @@ local translations = {
 		TornadoSpeedLabel = "🌪️ Rotation Speed: ",
 		TornadoSpeedHint = "(Crazy speed > 3000)",
 		InstantKillAll = "   Instant Kill All (Map Hitbox): ",
+		InfiniteJump = "   Infinite Jump: ",
 		TpMapCenter = "   TP Map Center",
 		TpRoof = "   TP Roof",
 		TpSpawn = "   TP Spawn",
 		EnglishSheriff = "   Auto Equip Gun: ",
-		SheriffAimlock = "   Aimlock (Prediction): ",
+		SheriffAimlock = "   Aimlock: ",
 		SheriffSilentAim = "   Silent Aim: ",
-		AutoShootMurder = "   Auto Shoot Murderer: ",
+		AutoShootMurder = "   gun aim lock: ",
 		AutoGrabGun = "   Auto Grab Gun: ",
 		TpSheriff = "   TP Sheriff",
 		TpMurder = "   TP Murderer",
@@ -992,6 +994,49 @@ local function launchMainInterface()
 		end
 	end)
 
+	local infiniteJumpEnabled = savedSettings.InfiniteJumpEnabled or false
+	local infiniteJumpBtn = Instance.new("TextButton")
+	infiniteJumpBtn.Size = UDim2.new(1, 0, 0, 50)
+	infiniteJumpBtn.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+	infiniteJumpBtn.Text = L("InfiniteJump") .. (infiniteJumpEnabled and "ON" or "OFF")
+	infiniteJumpBtn.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(90, 255, 90) or Color3.fromRGB(240, 240, 250)
+	infiniteJumpBtn.TextSize = 14
+	infiniteJumpBtn.Font = Enum.Font.GothamSemibold
+	infiniteJumpBtn.TextXAlignment = Enum.TextXAlignment.Left
+	infiniteJumpBtn.LayoutOrder = 4
+	infiniteJumpBtn.Parent = pages.ESP
+
+	local infJumpCorner = Instance.new("UICorner")
+	infJumpCorner.CornerRadius = UDim.new(0, 14)
+	infJumpCorner.Parent = infiniteJumpBtn
+
+	local infJumpStroke = Instance.new("UIStroke")
+	infJumpStroke.Color = Color3.fromRGB(50, 60, 90)
+	infJumpStroke.Thickness = 1.2
+	infJumpStroke.Transparency = 0.5
+	infJumpStroke.Parent = infiniteJumpBtn
+
+	infiniteJumpBtn.MouseButton1Click:Connect(function()
+		playKeyboardSound()
+		infiniteJumpEnabled = not infiniteJumpEnabled
+		savedSettings.InfiniteJumpEnabled = infiniteJumpEnabled
+		saveData(SAVE_FILE_NAME, savedSettings)
+		infiniteJumpBtn.Text = L("InfiniteJump") .. (infiniteJumpEnabled and "ON" or "OFF")
+		infiniteJumpBtn.TextColor3 = infiniteJumpEnabled and Color3.fromRGB(90, 255, 90) or Color3.fromRGB(240, 240, 250)
+	end)
+
+	UserInputService.JumpRequest:Connect(function()
+		if infiniteJumpEnabled then
+			local char = localPlayer.Character
+			if char then
+				local humanoid = char:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+				end
+			end
+		end
+	end)
+
 	local autoFarmEnabled = savedSettings.AutoFarmEnabled or false
 	local autoFarmSpeed = savedSettings.AutoFarmSpeed or 70 
 	local coinTransitSpeed = savedSettings.CoinTransitSpeed or 50
@@ -1297,6 +1342,7 @@ local function launchMainInterface()
 
 	task.spawn(function()
 		local waitingForNewRound = false
+
 		while true do
 			if autoFarmEnabled then
 				local char = localPlayer.Character
@@ -1323,22 +1369,34 @@ local function launchMainInterface()
 						local coin = findNearestValidCoin()
 						if coin and coin.Parent and coin.Transparency < 1 then
 							humanoid.PlatformStand = true
+							
+							local startTime = tick()
 							while autoFarmEnabled and coin and coin.Parent and coin.Transparency < 1 do
-								local targetCF = coin.CFrame + Vector3.new(0, 0.1, 0)
-								local distance = (rootPart.Position - targetCF.Position).Magnitude
-								if distance < 0.4 then break end 
+								local targetPos = coin.Position + Vector3.new(0, 0.5, 0)
+								local distance = (rootPart.Position - targetPos).Magnitude
 								
+								if distance < 1.5 then 
+									break 
+								end
+								
+								if tick() - startTime > 1.5 then
+									rootPart.CFrame = rootPart.CFrame:Lerp(CFrame.new(targetPos), 0.3)
+									break
+								end
+
 								local dt = RunService.RenderStepped:Wait()
-								local currentPos = rootPart.Position
-								local alpha = math.clamp((autoFarmSpeed * dt) / math.max(distance, 0.1), 0, 1)
-								local nextPos = currentPos:Lerp(targetCF.Position, alpha)
+								local alpha = math.clamp((autoFarmSpeed * 0.7 * dt) / math.max(distance, 0.1), 0, 1)
+								local nextPos = rootPart.Position:Lerp(targetPos, alpha)
 								
-								rootPart.CFrame = CFrame.new(nextPos, nextPos + Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
+								rootPart.CFrame = CFrame.new(nextPos)
 								rootPart.AssemblyLinearVelocity = Vector3.zero
 								rootPart.AssemblyAngularVelocity = Vector3.zero
 							end
 							
-							if coin and coin.Parent then rootPart.CFrame = coin.CFrame + Vector3.new(0, 0.1, 0) end
+							if coin and coin.Parent then 
+								rootPart.CFrame = CFrame.new(rootPart.Position:Lerp(coin.Position + Vector3.new(0, 0.5, 0), 0.5))
+							end
+							
 							rootPart.AssemblyLinearVelocity = Vector3.zero
 							rootPart.AssemblyAngularVelocity = Vector3.zero
 							task.wait(0.05)
@@ -1855,11 +1913,6 @@ local function launchMainInterface()
 		bar.Parent = headCrosshair
 	end
 
-	-- Variables pour la détection dynamique des mouvements brusques et du calcul des sauts (X, Y, Z)
-	local lastTargetPos = nil
-	local lastTargetVel = Vector3.zero
-	local currentCameraLerpSpeed = 38 -- Vitesse maximale instantanée pour que ça vise cash sans délai
-
 	local function getTargetHitPosition(targetChar, dt)
 		local upperTorso = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso")
 		local rootPart = targetChar:FindFirstChild("HumanoidRootPart")
@@ -1870,39 +1923,30 @@ local function launchMainInterface()
 			local targetPos = upperTorso.Position
 			local targetVelocity = rootPart.AssemblyLinearVelocity
 			
-			-- Calcul précis des mouvements (vitesse, saut, direction) sur les axes X, Y, Z
-			local acceleration = (targetVelocity - lastTargetVel) / math.max(dt, 0.001)
-			lastTargetVel = targetVelocity
-
-			local myChar = localPlayer.Character
-			local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-			local myVelocity = myRoot and myRoot.AssemblyLinearVelocity or Vector3.zero
-
-			-- Compensation dynamique des sauts et de la vitesse de la cible
 			local jumpCompensation = 0
 			if humanoid then
 				local state = humanoid:GetState()
 				if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.FallingDown then
 					if targetVelocity.Y > 0.1 then
-						jumpCompensation = (targetVelocity.Y * 0.12) + 0.6
-					elseif targetVelocity.Y < -0.1 then
-						jumpCompensation = (targetVelocity.Y * 0.1)
+						jumpCompensation = (targetVelocity.Y * 0.14) + 0.8
+					else
+						jumpCompensation = (targetVelocity.Y * 0.12)
 					end
 				end
 			end
 
 			local distanceToTarget = 0
+			local myChar = localPlayer.Character
+			local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
 			if myRoot then
 				distanceToTarget = (myRoot.Position - rootPart.Position).Magnitude
 			end
-			local distancePredictionScale = math.clamp(distanceToTarget * 0.002, 1, 1.4)
+			local distancePredictionScale = math.clamp(distanceToTarget * 0.0025, 1, 1.6)
 
-			-- Prédiction ultra-précise de la trajectoire de la balle (vitesse + anticipation instantanée)
-			local horizontalPrediction = Vector3.new(targetVelocity.X, 0, targetVelocity.Z) * 0.11 * distancePredictionScale
+			local horizontalPrediction = Vector3.new(targetVelocity.X, 0, targetVelocity.Z) * 0.13 * distancePredictionScale
 			local verticalPrediction = Vector3.new(0, jumpCompensation, 0)
 			
 			local finalPredictedPosition = targetPos + horizontalPrediction + verticalPrediction
-			lastTargetPos = targetPos
 			return finalPredictedPosition
 			
 		elseif rootPart then
@@ -1975,8 +2019,12 @@ local function launchMainInterface()
 							if murderPlr and murderPlr.Character then
 								local preciseTargetPos = getTargetHitPosition(murderPlr.Character, dt)
 								if preciseTargetPos then
-									local targetCFrame = CFrame.new(Camera.CFrame.Position, preciseTargetPos)
-									Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 1) -- Snap instantané sans délai de chargement
+									local camCF = Camera.CFrame
+									local shiftLockOffset = camCF.RightVector * 1.75
+									local adjustedCamPos = camCF.Position + shiftLockOffset
+									
+									local targetCFrame = CFrame.new(adjustedCamPos, preciseTargetPos)
+									Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 1)
 									tool:Activate()
 								end
 							end
@@ -1996,8 +2044,12 @@ local function launchMainInterface()
 				
 				if aimlockActive then
 					headCrosshair.Visible = true
-					local targetCFrame = CFrame.new(Camera.CFrame.Position, preciseTargetPos)
-					Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 1) -- Snap immédiat direct sur la cible
+					local camCF = Camera.CFrame
+					local shiftLockOffset = camCF.RightVector * 1.75
+					local adjustedCamPos = camCF.Position + shiftLockOffset
+					
+					local targetCFrame = CFrame.new(adjustedCamPos, preciseTargetPos)
+					Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 1)
 				else
 					headCrosshair.Visible = false
 				end
@@ -2022,7 +2074,11 @@ local function launchMainInterface()
 						if murderPlr and murderPlr.Character then
 							local preciseTargetPos = getTargetHitPosition(murderPlr.Character, 0.016)
 							if preciseTargetPos then
-								Camera.CFrame = CFrame.new(Camera.CFrame.Position, preciseTargetPos)
+								local camCF = Camera.CFrame
+								local shiftLockOffset = camCF.RightVector * 1.75
+								local adjustedCamPos = camCF.Position + shiftLockOffset
+								
+								Camera.CFrame = CFrame.new(adjustedCamPos, preciseTargetPos)
 								if char:FindFirstChild("HumanoidRootPart") then
 									char.HumanoidRootPart.CFrame = CFrame.new(char.HumanoidRootPart.Position, Vector3.new(preciseTargetPos.X, char.HumanoidRootPart.Position.Y, preciseTargetPos.Z))
 								end
@@ -2241,7 +2297,6 @@ else
 	submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	submitBtn.TextSize = 14
 	submitBtn.Font = Enum.Font.GothamBold
-	submitBtn.Parent = keyFrame
 
 	local subCorner = Instance.new("UICorner")
 	subCorner.CornerRadius = UDim.new(0, 12)
