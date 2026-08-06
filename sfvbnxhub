@@ -887,9 +887,12 @@ local function launchMainInterface()
 		checkContainer(char)
 		
 		local data = espData[plr]
-		if not data or not data.Highlight or not data.Highlight.Parent or not data.Billboard or not data.Billboard.Parent then
+		-- On vérifie si le personnage a changé (reset / respawn) pour recréer proprement l'ESP
+		if not data or not data.Highlight or not data.Highlight.Parent or not data.Billboard or not data.Billboard.Parent or data.Character ~= char then
 			removeESP(plr)
 			data = {}
+			data.Character = char
+			
 			local highlight = Instance.new("Highlight")
 			highlight.Adornee = char
 			highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
@@ -936,6 +939,7 @@ local function launchMainInterface()
 		data.TextLabel.Text = string.format("[%s] %s\nDistance : %dm", roleName, plr.DisplayName, distance)
 		data.TextLabel.TextColor3 = color
 	end
+
 
 	espToggleBtn.MouseButton1Click:Connect(function()
 		playKeyboardSound()
