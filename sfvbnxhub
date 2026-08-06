@@ -51,7 +51,7 @@ local currentLanguage = savedSettings.Language or "FR"
 
 local translations = {
 	FR = {
-		Brand = "zizi le gay,
+		Brand = "zizi le gay",
 		Home = "Accueil",
 		ESP = "ESP",
 		AutoFarm = "Autofarm",
