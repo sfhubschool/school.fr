@@ -2,7 +2,7 @@
 -- ⚡ vbnx V2 - Code mis à jour avec Auto Grab Gun optimisé (Sheriff Death TP)
 --[========================================================================]
 
-Lwwwocal Players = game:GetService("Players")
+local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
