@@ -2479,13 +2479,29 @@ local function launchMainInterface()
 
 	closeBtn.MouseButton1Click:Connect(function()
 		playKeyboardSound()
-		for i = 1, 40 do
-			local bubble = Instance.new("Frame")
-			local size = math.random(15, 50)
-			bubble.Size = UDim2.new(0, size, 0, size)
-			bubble.Position = mainFrame.Position + UDim2.new(math.random(), -350, math.random(), -230)
-			bubble.BackgroundColor3 = Color3.fromRGB(math.random(100, 180), math.random(180, 255), 255)
-		end
+		
+		-- Animation de fermeture fluide (fade out)
+		local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local tween = TweenService:Create(mainFrame, tweenInfo, { Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1 })
+		tween:Play()
+		
+		task.wait(0.25)
+		
+		-- Masquer le panel principal et afficher le bouton miniature pour le rouvrir
+		mainFrame.Visible = false
+		miniButton.Visible = true
+	end)
+
+	-- Permettre de rouvrir le panel via le bouton miniature
+	miniButton.MouseButton1Click:Connect(function()
+		playKeyboardSound()
+		miniButton.Visible = false
+		mainFrame.Visible = true
+		mainFrame.Size = UDim2.new(0, 0, 0, 0)
+		
+		local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local tween = TweenService:Create(mainFrame, tweenInfo, { Size = UDim2.new(0, 700, 0, 460), BackgroundTransparency = 0 })
+		tween:Play()
 	end)
 end
 
