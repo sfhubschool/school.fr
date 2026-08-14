@@ -2334,7 +2334,74 @@ local function launchMainInterface()
 	-- FONCTION DE PRÉCISION AMÉLIORÉE : Cible la tête/cou précisément en prédisant les mouvements et les sauts
 	local function getTargetHitPosition(targetChar, dt)
 		local head = targetChar:FindFirstChild("Head")
-		local upperTorso = targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("Torso")
+				local humanoidRootPart = targetChar:FindFirstChild("HumanoidRootPart")
+		
+		if head then
+			-- Prédiction de mouvement basique (vitesse * temps) pour le tir
+			local velocity = humanoidRootPart and humanoidRootPart.AssemblyLinearVelocity or Vector3.new(0, 0, 0)
+			local predictedPos = head.Position + (velocity * 0.1)
+			return predictedPos
+		end
+		return nil
+	end
+
+	-- Boucle de tir automatique / Silent Aim
+	RunService.RenderStepped:Connect(function(dt)
+		if autoShootMurderEnabled or sheriffSilentAimEnabled then
+			pcall(function()
+				local character = localPlayer.Character
+				local tool = character and character:FindFirstChildOfClass("Tool")
+				if tool then
+					local name = tool.Name:lower()
+					if name == "gun" or name == "revolver" or name:find("pistolet") then
+						local murder = findMurdererPlayer()
+						if murder and murder.Character then
+							local hitPos = getTargetHitPosition(murder.Character, dt)
+							if hitPos and Camera then
+								-- Si Silent Aim activé, oriente la caméra ou le tir vers la cible
+								if sheriffSilentAimEnabled then
+									Camera.CFrame = CFrame.new(Camera.CFrame.Position, hitPos)
+								end
+							end
+						end
+					end
+				end
+			end)
+		end
+	end)
+
+	-- Auto grab gun si lâché par le shérif
+	RunService.RenderStepped:Connect(function()
+		if autoGrabGunEnabled then
+			pcall(function()
+				local char = localPlayer.Character
+				if char and char:FindFirstChild("HumanoidRootPart") then
+					for _, obj in ipairs(Workspace:GetDescendants()) do
+						if obj:IsA("Tool") and (obj.Name:lower() == "gun" or obj.Name:lower() == "revolver") then
+							if not obj.Parent:IsA("Model") or not Players:GetPlayerFromCharacter(obj.Parent) then
+								if obj:FindFirstChild("Handle") then
+									obj.Handle.CFrame = char.HumanoidRootPart.CFrame
+								end
+							end
+						end
+					end
+				end
+			end)
+		end
+	end)
+
+	-- Animation d'apparition de l'interface principale
+	mainFrame.Size = UDim2.new(0, 0, 0, 0)
+	mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 700, 0, 460),
+		Position = UDim2.new(0.5, -350, 0.5, -230)
+	}):Play()
+end
+
+-- Lancement effectif du script après validation du Checkpoint
+launchMainInterface()
+
 		local rootPart = targetChar:FindFirstChild("HumanoidRootPart")
 		local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
 		
