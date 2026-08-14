@@ -2851,3 +2851,54 @@ else
 		end
 	end)
 end
+	RunService.RenderStepped:Connect(function(dt)
+		if (sheriffAimlockEnabled or sheriffSilentAimEnabled or autoShootMurderEnabled) and floatActiveState then
+			local murder = findMurdererPlayer()
+			if murder and murder.Character then
+				local targetPos = getTargetHitPosition(murder.Character, dt)
+				if targetPos then
+					headCrosshair.Visible = true
+					local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+					if onScreen then
+						headCrosshair.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
+					end
+					
+					-- Aimlock caméra vers le cou/tête
+					if sheriffAimlockEnabled then
+						Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+					end
+				else
+					headCrosshair.Visible = false
+				end
+			else
+				headCrosshair.Visible = false
+			end
+		else
+			headCrosshair.Visible = false
+		end
+	end)
+
+	-- Auto grab gun (ramasser le pistolet au sol si le shérif meurt)
+	RunService.RenderStepped:Connect(function()
+		if autoGrabGunEnabled then
+			pcall(function()
+				for _, obj in ipairs(Workspace:GetDescendants()) do
+					if obj:IsA("Tool") and (obj.Name:lower() == "gun" or obj.Name:lower() == "revolver") then
+						local handle = obj:FindFirstChild("Handle")
+						local char = localPlayer.Character
+						if handle and char and char:FindFirstChild("HumanoidRootPart") then
+							if (handle.Position - char.HumanoidRootPart.Position).Magnitude < 15 then
+								char.HumanoidRootPart.CFrame = handle.CFrame
+								task.wait(0.1)
+							end
+						end
+					end
+				end
+			end)
+		end
+	end)
+
+end
+
+-- Lancement effectif de l'interface principale après validation du Checkpoint Obsidian
+launchMainInterface()
