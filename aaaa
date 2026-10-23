@@ -1,0 +1,704 @@
+-- ⚡ vbnx V2 - Auto-Farm Exclusif & ESP Halloween Aura Pro
+--[========================================================================]
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+
+local localPlayer = Players.LocalPlayer
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+local camera = Workspace.CurrentCamera
+
+local SAVE_FILE_NAME = "PrimeV2_AutoFarm_Settings.json"
+
+local function loadData()
+	local success, data = pcall(function()
+		if readfile and isfile and isfile(SAVE_FILE_NAME) then
+			return HttpService:JSONDecode(readfile(SAVE_FILE_NAME))
+		end
+	end)
+	if success and type(data) == "table" then
+		return data
+	end
+	return {}
+end
+
+local function saveData(data)
+	pcall(function()
+		if writefile then
+			writefile(SAVE_FILE_NAME, HttpService:JSONEncode(data))
+		end
+	end)
+end
+
+local savedSettings = loadData()
+
+if playerGui:FindFirstChild("VbnxAutoFarmGui") then 
+	playerGui.VbnxAutoFarmGui:Destroy() 
+end
+
+local function playKeyboardSound()
+	pcall(function()
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://6895070853" 
+		sound.Volume = 0.5
+		sound.Pitch = math.random(95, 105) / 100
+		sound.Parent = playerGui
+		sound:Play()
+		sound.Ended:Connect(function() sound:Destroy() end)
+	end)
+end
+
+-- Interface Unique Auto-Farm
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "VbnxAutoFarmGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 340, 0, 325)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(11, 13, 20)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 18)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(186, 85, 211)
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.3
+mainStroke.Parent = mainFrame
+
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 40)
+topBar.BackgroundTransparency = 1
+topBar.Parent = mainFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -45, 1, 0)
+titleLabel.Position = UDim2.new(0, 15, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "⚡ vbnx V2 — Auto-Farm & Aura ESP"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 15
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = topBar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
+closeBtn.Position = UDim2.new(1, -34, 0, 6)
+closeBtn.BackgroundColor3 = Color3.fromRGB(25, 28, 40)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(230, 235, 250)
+closeBtn.TextSize = 13
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = topBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeBtn
+
+closeBtn.MouseButton1Click:Connect(function()
+	playKeyboardSound()
+	local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+	local tw = TweenService:Create(mainFrame, tweenInfo, {
+		Size = UDim2.new(0, 0, 0, 0)
+	})
+	tw:Play()
+	tw.Completed:Connect(function()
+		screenGui:Destroy()
+	end)
+end)
+
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, -24, 1, -50)
+contentContainer.Position = UDim2.new(0, 12, 0, 42)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = mainFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 8)
+listLayout.Parent = contentContainer
+
+-- Variables Auto-Farm & Paramètres
+local autoFarmEnabled = savedSettings.AutoFarmEnabled or false
+local autoFarmSpeed = savedSettings.AutoFarmSpeed or 25
+local maxCoinDistance = savedSettings.MaxCoinDistance or 4000
+local espEnabled = savedSettings.EspEnabled or false
+local ignoredCoins = {}
+local activeEsp = {}
+
+-- 1. Bouton Toggle Auto-Farm
+local autofarmBtn = Instance.new("TextButton")
+autofarmBtn.Size = UDim2.new(1, 0, 0, 40)
+autofarmBtn.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+autofarmBtn.Text = "   Autofarm : " .. (autoFarmEnabled and "ON" or "OFF")
+autofarmBtn.TextColor3 = autoFarmEnabled and Color3.fromRGB(90, 255, 90) or Color3.fromRGB(240, 240, 250)
+autofarmBtn.TextSize = 13
+autofarmBtn.Font = Enum.Font.GothamSemibold
+autofarmBtn.TextXAlignment = Enum.TextXAlignment.Left
+autofarmBtn.LayoutOrder = 1
+autofarmBtn.Parent = contentContainer
+
+local afCorner = Instance.new("UICorner")
+afCorner.CornerRadius = UDim.new(0, 10)
+afCorner.Parent = autofarmBtn
+
+local afStroke = Instance.new("UIStroke")
+afStroke.Color = Color3.fromRGB(50, 60, 90)
+afStroke.Thickness = 1.2
+afStroke.Transparency = 0.5
+afStroke.Parent = autofarmBtn
+
+autofarmBtn.MouseButton1Click:Connect(function()
+	playKeyboardSound()
+	autoFarmEnabled = not autoFarmEnabled
+	savedSettings.AutoFarmEnabled = autoFarmEnabled
+	saveData(savedSettings)
+	autofarmBtn.Text = "   Autofarm : " .. (autoFarmEnabled and "ON" or "OFF")
+	autofarmBtn.TextColor3 = autoFarmEnabled and Color3.fromRGB(90, 255, 90) or Color3.fromRGB(240, 240, 250)
+end)
+
+-- 2. Carte Vitesse Auto-Farm
+local speedCard = Instance.new("Frame")
+speedCard.Size = UDim2.new(1, 0, 0, 60)
+speedCard.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+speedCard.BorderSizePixel = 0
+speedCard.LayoutOrder = 2
+speedCard.Parent = contentContainer
+
+local speedCardCorner = Instance.new("UICorner")
+speedCardCorner.CornerRadius = UDim.new(0, 10)
+speedCardCorner.Parent = speedCard
+
+local speedCardStroke = Instance.new("UIStroke")
+speedCardStroke.Color = Color3.fromRGB(50, 60, 90)
+speedCardStroke.Thickness = 1.2
+speedCardStroke.Transparency = 0.5
+speedCardStroke.Parent = speedCard
+
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(1, -20, 0, 20)
+speedLabel.Position = UDim2.new(0, 10, 0, 5)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Font = Enum.Font.GothamBold
+speedLabel.TextSize = 12
+speedLabel.TextColor3 = Color3.fromRGB(200, 210, 240)
+speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+speedLabel.Text = "⚡ Vitesse Douce : " .. autoFarmSpeed
+speedLabel.Parent = speedCard
+
+local speedMinusBtn = Instance.new("TextButton")
+speedMinusBtn.Size = UDim2.new(0, 32, 0, 26)
+speedMinusBtn.Position = UDim2.new(0, 10, 0, 27)
+speedMinusBtn.BackgroundColor3 = Color3.fromRGB(30, 36, 52)
+speedMinusBtn.Text = "-"
+speedMinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedMinusBtn.TextSize = 14
+speedMinusBtn.Font = Enum.Font.GothamBold
+speedMinusBtn.Parent = speedCard
+
+local minusCorner = Instance.new("UICorner")
+minusCorner.CornerRadius = UDim.new(0, 6)
+minusCorner.Parent = speedMinusBtn
+
+local speedInputBox = Instance.new("TextBox")
+speedInputBox.Size = UDim2.new(0, 55, 0, 26)
+speedInputBox.Position = UDim2.new(0, 48, 0, 27)
+speedInputBox.BackgroundColor3 = Color3.fromRGB(24, 28, 42)
+speedInputBox.Text = tostring(autoFarmSpeed)
+speedInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedInputBox.TextSize = 12
+speedInputBox.Font = Enum.Font.GothamBold
+speedInputBox.ClearTextOnFocus = false
+speedInputBox.Parent = speedCard
+
+local speedInputCorner = Instance.new("UICorner")
+speedInputCorner.CornerRadius = UDim.new(0, 6)
+speedInputCorner.Parent = speedInputBox
+
+local speedPlusBtn = Instance.new("TextButton")
+speedPlusBtn.Size = UDim2.new(0, 32, 0, 26)
+speedPlusBtn.Position = UDim2.new(0, 109, 0, 27)
+speedPlusBtn.BackgroundColor3 = Color3.fromRGB(30, 36, 52)
+speedPlusBtn.Text = "+"
+speedPlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedPlusBtn.TextSize = 14
+speedPlusBtn.Font = Enum.Font.GothamBold
+speedPlusBtn.Parent = speedCard
+
+local plusCorner = Instance.new("UICorner")
+plusCorner.CornerRadius = UDim.new(0, 6)
+plusCorner.Parent = speedPlusBtn
+
+speedMinusBtn.MouseButton1Click:Connect(function()
+	playKeyboardSound()
+	autoFarmSpeed = math.clamp(autoFarmSpeed - 5, 5, 80)
+	speedInputBox.Text = tostring(autoFarmSpeed)
+	savedSettings.AutoFarmSpeed = autoFarmSpeed
+	saveData(savedSettings)
+	speedLabel.Text = "⚡ Vitesse Douce : " .. autoFarmSpeed
+end)
+
+speedPlusBtn.MouseButton1Click:Connect(function()
+	playKeyboardSound()
+	autoFarmSpeed = math.clamp(autoFarmSpeed + 5, 5, 80)
+	speedInputBox.Text = tostring(autoFarmSpeed)
+	savedSettings.AutoFarmSpeed = autoFarmSpeed
+	saveData(savedSettings)
+	speedLabel.Text = "⚡ Vitesse Douce : " .. autoFarmSpeed
+end)
+
+speedInputBox.FocusLost:Connect(function()
+	local num = tonumber(speedInputBox.Text)
+	if num then
+		autoFarmSpeed = math.clamp(math.floor(num), 5, 80)
+		speedInputBox.Text = tostring(autoFarmSpeed)
+		savedSettings.AutoFarmSpeed = autoFarmSpeed
+		saveData(savedSettings)
+		speedLabel.Text = "⚡ Vitesse Douce : " .. autoFarmSpeed
+	else
+		speedInputBox.Text = tostring(autoFarmSpeed)
+	end
+end)
+
+-- 3. Carte Distance Max
+local distCard = Instance.new("Frame")
+distCard.Size = UDim2.new(1, 0, 0, 60)
+distCard.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+distCard.BorderSizePixel = 0
+distCard.LayoutOrder = 3
+distCard.Parent = contentContainer
+
+local distCardCorner = Instance.new("UICorner")
+distCardCorner.CornerRadius = UDim.new(0, 10)
+distCardCorner.Parent = distCard
+
+local distCardStroke = Instance.new("UIStroke")
+distCardStroke.Color = Color3.fromRGB(50, 60, 90)
+distCardStroke.Thickness = 1.2
+distCardStroke.Transparency = 0.5
+distCardStroke.Parent = distCard
+
+local distLabel = Instance.new("TextLabel")
+distLabel.Size = UDim2.new(1, -20, 0, 20)
+distLabel.Position = UDim2.new(0, 10, 0, 5)
+distLabel.BackgroundTransparency = 1
+distLabel.Font = Enum.Font.GothamBold
+distLabel.TextSize = 12
+distLabel.TextColor3 = Color3.fromRGB(200, 210, 240)
+distLabel.TextXAlignment = Enum.TextXAlignment.Left
+distLabel.Text = "🎯 Distance Max Pièces : " .. maxCoinDistance .. "m"
+distLabel.Parent = distCard
+
+local distMinusBtn = Instance.new("TextButton")
+distMinusBtn.Size = UDim2.new(0, 32, 0, 26)
+distMinusBtn.Position = UDim2.new(0, 10, 0, 27)
+distMinusBtn.BackgroundColor3 = Color3.fromRGB(30, 36, 52)
+distMinusBtn.Text = "-"
+distMinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+distMinusBtn.TextSize = 14
+distMinusBtn.Font = Enum.Font.GothamBold
+distMinusBtn.Parent = distCard
+
+local dMinusCorner = Instance.new("UICorner")
+dMinusCorner.CornerRadius = UDim.new(0, 6)
+dMinusCorner.Parent = distMinusBtn
+
+local distInputBox = Instance.new("TextBox")
+distInputBox.Size = UDim2.new(0, 65, 0, 26)
+distInputBox.Position = UDim2.new(0, 48, 0, 27)
+distInputBox.BackgroundColor3 = Color3.fromRGB(24, 28, 42)
+distInputBox.Text = tostring(maxCoinDistance)
+distInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+distInputBox.TextSize = 12
+distInputBox.Font = Enum.Font.GothamBold
+distInputBox.ClearTextOnFocus = false
+distInputBox.Parent = distCard
+
+local distInputCorner = Instance.new("UICorner")
+distInputCorner.CornerRadius = UDim.new(0, 6)
+distInputCorner.Parent = distInputBox
+
+local distPlusBtn = Instance.new("TextButton")
+distPlusBtn.Size = UDim2.new(0, 32, 0, 26)
+distPlusBtn.Position = UDim2.new(0, 119, 0, 27)
+distPlusBtn.BackgroundColor3 = Color3.fromRGB(30, 36, 52)
+distPlusBtn.Text = "+"
+distPlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+distPlusBtn.TextSize = 14
+distPlusBtn.Font = Enum.Font.GothamBold
+distPlusBtn.Parent = distCard
+
+local dPlusCorner = Instance.new("UICorner")
+dPlusCorner.CornerRadius = UDim.new(0, 6)
+dPlusCorner.Parent = distPlusBtn
+
+distMinusBtn.MouseButton1Click:Connect(function()
+	playKeyboardSound()
+	maxCoinDistance = math.clamp(maxCoinDistance - 500, 500, 20000)
+	distInputBox.Text = tostring(maxCoinDistance)
+	savedSettings.MaxCoinDistance = maxCoinDistance
+	saveData(savedSettings)
+	distLabel.Text = "🎯 Distance Max Pièces : " .. maxCoinDistance .. "m"
+end)
+
+distPlusBtn.MouseButton1Click:Connect(function()
+	playKeyboardSound()
+	maxCoinDistance = math.clamp(maxCoinDistance + 500, 500, 20000)
+	distInputBox.Text = tostring(maxCoinDistance)
+	savedSettings.MaxCoinDistance = maxCoinDistance
+	saveData(savedSettings)
+	distLabel.Text = "🎯 Distance Max Pièces : " .. maxCoinDistance .. "m"
+end)
+
+distInputBox.FocusLost:Connect(function()
+	local num = tonumber(distInputBox.Text)
+	if num then
+		maxCoinDistance = math.clamp(math.floor(num), 100, 20000)
+		distInputBox.Text = tostring(maxCoinDistance)
+		savedSettings.MaxCoinDistance = maxCoinDistance
+		saveData(savedSettings)
+		distLabel.Text = "🎯 Distance Max Pièces : " .. maxCoinDistance .. "m"
+	else
+		distInputBox.Text = tostring(maxCoinDistance)
+	end
+end)
+
+-- 4. Bouton Toggle ESP Pièces
+local espBtn = Instance.new("TextButton")
+espBtn.Size = UDim2.new(1, 0, 0, 40)
+espBtn.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+espBtn.Text = "   ESP Aura Halloween : " .. (espEnabled and "ON" or "OFF")
+espBtn.TextColor3 = espEnabled and Color3.fromRGB(90, 255, 90) or Color3.fromRGB(240, 240, 250)
+espBtn.TextSize = 13
+espBtn.Font = Enum.Font.GothamSemibold
+espBtn.TextXAlignment = Enum.TextXAlignment.Left
+espBtn.LayoutOrder = 4
+espBtn.Parent = contentContainer
+
+local espCorner = Instance.new("UICorner")
+espCorner.CornerRadius = UDim.new(0, 10)
+espCorner.Parent = espBtn
+
+local espStroke = Instance.new("UIStroke")
+espStroke.Color = Color3.fromRGB(50, 60, 90)
+espStroke.Thickness = 1.2
+espStroke.Transparency = 0.5
+espStroke.Parent = espBtn
+
+local function clearAllEsp()
+	for coin, data in pairs(activeEsp) do
+		if data then
+			if data.Billboard then data.Billboard:Destroy() end
+			if data.Highlight then data.Highlight:Destroy() end
+		end
+	end
+	activeEsp = {}
+end
+
+espBtn.MouseButton1Click:Connect(function()
+	playKeyboardSound()
+	espEnabled = not espEnabled
+	savedSettings.EspEnabled = espEnabled
+	saveData(savedSettings)
+	espBtn.Text = "   ESP Aura Halloween : " .. (espEnabled and "ON" or "OFF")
+	espBtn.TextColor3 = espEnabled and Color3.fromRGB(90, 255, 90) or Color3.fromRGB(240, 240, 250)
+	
+	if not espEnabled then
+		clearAllEsp()
+	end
+end)
+
+-- Noclip permanent
+RunService.Stepped:Connect(function()
+	if autoFarmEnabled and localPlayer.Character then
+		for _, part in ipairs(localPlayer.Character:GetDescendants()) do
+			if part:IsA("BasePart") then 
+				part.CanCollide = false 
+			end
+		end
+	end
+end)
+
+-- Detection de la couleur de l'aura de la pièce
+local function detectCoinAuraColor(coin)
+	local defaultColor = Color3.fromRGB(255, 170, 0) -- Couleur Halloween par défaut (Orange)
+	
+	-- Recherche dans la pièce ou ses enfants (Particules, Lumieres, Effets)
+	for _, child in ipairs(coin:GetDescendants()) do
+		if child:IsA("ParticleEmitter") then
+			local keypoints = child.Color.Keypoints
+			if #keypoints > 0 then
+				return keypoints[1].Value
+			end
+		elseif child:IsA("Light") then
+			return child.Color
+		elseif child:IsA("Highlight") then
+			return child.FillColor
+		elseif child:IsA("SelectionBox") then
+			return child.Color3
+		end
+	end
+	
+	-- Si aucun effet d'aura n'est détecté, on prend la couleur de la pièce elle-même
+	if coin:IsA("BasePart") and coin.Color then
+		return coin.Color
+	end
+	
+	return defaultColor
+end
+
+-- Vérification de validité d'une pièce
+local function isCoinValid(coin)
+	if not coin or not coin.Parent or not coin:IsDescendantOf(Workspace) or coin.Transparency >= 1 or ignoredCoins[coin] then
+		return false
+	end
+	
+	local char = localPlayer.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		local dist = (coin.Position - char.HumanoidRootPart.Position).Magnitude
+		if dist > maxCoinDistance then
+			return false
+		end
+	end
+	
+	return true
+end
+
+-- Détection de la pièce la plus proche avec filtre de distance max
+local function findNearestValidCoin()
+	local nearest = nil
+	local shortestDist = math.huge
+	local char = localPlayer.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+	local rootPos = char.HumanoidRootPart.Position
+
+	pcall(function()
+		for _, obj in ipairs(Workspace:GetDescendants()) do
+			if obj and obj:IsA("BasePart") and isCoinValid(obj) then
+				local nameLower = obj.Name:lower()
+				if nameLower == "coin" or nameLower == "coins" or nameLower:find("coin") or nameLower:find("piece") or nameLower:find("pièce") then
+					if obj.Size.Magnitude > 0 then
+						local dist = (obj.Position - rootPos).Magnitude
+						if dist <= maxCoinDistance and dist < shortestDist then
+							shortestDist = dist
+							nearest = obj
+						end
+					end
+				end
+			end
+		end
+	end)
+	return nearest
+end
+
+-- Collecte instantanée
+local function simulateCollection(rootPart, coin)
+	pcall(function()
+		if firetouchinterest and rootPart and coin then
+			firetouchinterest(rootPart, coin, 0)
+			firetouchinterest(rootPart, coin, 1)
+			firetouchinterest(coin, rootPart, 0)
+			firetouchinterest(coin, rootPart, 1)
+		end
+		
+		local prompt = coin:FindFirstChildWhichIsA("ProximityPrompt", true) or (coin.Parent and coin.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
+		if prompt and fireproximityprompt then
+			fireproximityprompt(prompt)
+		end
+	end)
+end
+
+-- Création d'un ESP Style Halloween / Aura pour une pièce
+local function createAuraEsp(coin, auraColor)
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "AuraCoinESP"
+	billboard.Size = UDim2.new(0, 110, 0, 35)
+	billboard.AlwaysOnTop = true
+	billboard.StudsOffset = Vector3.new(0, 2.2, 0)
+	
+	local bgFrame = Instance.new("Frame")
+	bgFrame.Size = UDim2.new(1, 0, 1, 0)
+	bgFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+	bgFrame.BackgroundTransparency = 0.25
+	bgFrame.Parent = billboard
+	
+	local frameCorner = Instance.new("UICorner")
+	frameCorner.CornerRadius = UDim.new(0, 8)
+	frameCorner.Parent = bgFrame
+	
+	local frameStroke = Instance.new("UIStroke")
+	frameStroke.Color = auraColor
+	frameStroke.Thickness = 1.8
+	frameStroke.Transparency = 0.1
+	frameStroke.Parent = bgFrame
+	
+	local txt = Instance.new("TextLabel")
+	txt.Name = "Info"
+	txt.Size = UDim2.new(1, 0, 1, 0)
+	txt.BackgroundTransparency = 1
+	txt.TextColor3 = auraColor
+	txt.TextStrokeTransparency = 0.5
+	txt.TextSize = 12
+	txt.Font = Enum.Font.GothamBold
+	txt.Text = "🎃 [...]"
+	txt.Parent = bgFrame
+	
+	billboard.Parent = coin
+	
+	-- Effet Néon 3D au-travers des murs (Highlight)
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "CoinHighlight"
+	highlight.Adornee = coin
+	highlight.FillColor = auraColor
+	highlight.FillTransparency = 0.5
+	highlight.OutlineColor = auraColor
+	highlight.OutlineTransparency = 0
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.Parent = coin
+
+	return {
+		Billboard = billboard,
+		Highlight = highlight,
+		Stroke = frameStroke,
+		Label = txt,
+		Color = auraColor
+	}
+end
+
+-- Gestion ESP Pièces en arrière-plan
+task.spawn(function()
+	while true do
+		task.wait(0.3)
+		if espEnabled then
+			pcall(function()
+				local char = localPlayer.Character
+				local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+				
+				-- Nettoyer les ESP périmés
+				for coin, data in pairs(activeEsp) do
+					if not isCoinValid(coin) then
+						if data.Billboard then data.Billboard:Destroy() end
+						if data.Highlight then data.Highlight:Destroy() end
+						activeEsp[coin] = nil
+					end
+				end
+				
+				-- Ajouter/Mettre à jour les ESP des pièces avec leur aura
+				for _, obj in ipairs(Workspace:GetDescendants()) do
+					if obj and obj:IsA("BasePart") then
+						local nameLower = obj.Name:lower()
+						if nameLower == "coin" or nameLower == "coins" or nameLower:find("coin") or nameLower:find("piece") or nameLower:find("pièce") then
+							if isCoinValid(obj) then
+								if not activeEsp[obj] then
+									local auraColor = detectCoinAuraColor(obj)
+									activeEsp[obj] = createAuraEsp(obj, auraColor)
+								else
+									-- Mettre à jour la distance & vérifier la couleur si l'aura change
+									local data = activeEsp[obj]
+									if data and data.Label and rootPart then
+										local dist = math.floor((obj.Position - rootPart.Position).Magnitude)
+										data.Label.Text = "🎃 " .. dist .. "m"
+									end
+								end
+							else
+								if activeEsp[obj] then
+									if activeEsp[obj].Billboard then activeEsp[obj].Billboard:Destroy() end
+									if activeEsp[obj].Highlight then activeEsp[obj].Highlight:Destroy() end
+									activeEsp[obj] = nil
+								end
+							end
+						end
+					end
+				end
+			end)
+		end
+	end
+end)
+
+-- Boucle principale d'Auto-Farm Ultra-Fluide
+task.spawn(function()
+	while true do
+		task.wait(0.02)
+		
+		if autoFarmEnabled then
+			pcall(function()
+				local char = localPlayer.Character
+				if not char then return end
+				local rootPart = char:FindFirstChild("HumanoidRootPart")
+				local humanoid = char:FindFirstChildOfClass("Humanoid")
+				
+				if not rootPart or not humanoid or humanoid.Health <= 0 then return end
+				
+				local coin = findNearestValidCoin()
+				
+				if not coin then
+					autofarmBtn.Text = "   Autofarm : Attente pièces..."
+					autofarmBtn.TextColor3 = Color3.fromRGB(255, 180, 50)
+					task.wait(0.1)
+				else
+					autofarmBtn.Text = "   Autofarm : ON"
+					autofarmBtn.TextColor3 = Color3.fromRGB(90, 255, 90)
+					
+					humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+					rootPart.AssemblyLinearVelocity = Vector3.zero
+					rootPart.AssemblyAngularVelocity = Vector3.zero
+					
+					local startPos = rootPart.Position
+					local targetPos = coin.Position
+					local distance = (targetPos - startPos).Magnitude
+					
+					if distance > 0.5 then
+						local flyTime = distance / math.max(autoFarmSpeed, 1)
+						local elapsed = 0
+						
+						while elapsed < flyTime and autoFarmEnabled do
+							local dt = RunService.RenderStepped:Wait()
+							
+							if not isCoinValid(coin) then
+								break
+							end
+							
+							elapsed = elapsed + dt
+							local alpha = math.min(elapsed / flyTime, 1)
+							
+							targetPos = coin.Position 
+							rootPart.CFrame = CFrame.new(startPos:Lerp(targetPos, alpha))
+							rootPart.AssemblyLinearVelocity = Vector3.zero
+						end
+					end
+					
+					if isCoinValid(coin) then
+						rootPart.CFrame = CFrame.new(coin.Position)
+						simulateCollection(rootPart, coin)
+						
+						ignoredCoins[coin] = true
+						task.delay(3, function()
+							ignoredCoins[coin] = nil
+						end)
+					end
+				end
+			end)
+		else
+			pcall(function()
+				local char = localPlayer.Character
+				if char and char:FindFirstChildOfClass("Humanoid") then
+					char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.GettingUp)
+				end
+			end)
+			task.wait(0.1)
+		end
+	end
+end)
